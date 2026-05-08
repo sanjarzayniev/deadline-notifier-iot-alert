@@ -1,0 +1,56 @@
+name: Run Selenium Java application built with Maven
+
+on:
+#   push: # commment for easy access
+#     branches:
+#       - master
+#   pull_request:
+#     branches:
+#       - master
+  schedule:
+    - cron: "0 1 * * *" # it will be 7~8 am in our timezone
+    - cron: "0 14 * * *" # it will be 7~8 pm in our timezone
+
+permissions:
+  contents: write
+
+jobs:
+  run-selenium-script:
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          distribution: "temurin"
+          java-version: "11"
+
+      - name: Set up Chrome browser
+        run: google-chrome --version
+
+      - name: Build with Maven
+        run: mvn install
+
+      # Run Selenium script using Maven and Send Telegram notification
+      - name: Run Selenium script & Notify via Telegram
+        run: |
+          mvn exec:java -Dexec.mainClass="eclass.kr.DeadlineNotifier" > OUTPUT.txt
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} -d text="$(sed -n '/Today/,/^Bye/{/^Bye/d;p}' OUTPUT.txt)"
+        env:
+          ID: ${{ secrets.ID }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+
+      - name: Commit alert.json
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add web-alert/alert.json
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update alert status [skip ci]"
+            git push
+          fi

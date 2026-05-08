@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deadline Alert Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Segoe UI', system-ui, monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      letter-spacing: 0.2em;
+      color: #8b949e;
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+    }
+
+    /* ── Traffic light ─────────────────────────────────── */
+    .traffic-light {
+      background: #161b22;
+      border: 2px solid #30363d;
+      border-radius: 24px;
+      width: 120px;
+      padding: 18px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 1.5rem;
+    }
+
+    .bulb {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #21262d;
+      transition: background 0.4s, box-shadow 0.4s;
+    }
+
+    .bulb.on-red    { background: #ff3333; box-shadow: 0 0 28px 8px #ff333388; }
+    .bulb.on-yellow { background: #ffcc00; box-shadow: 0 0 28px 8px #ffcc0088; }
+    .bulb.on-green  { background: #33ff88; box-shadow: 0 0 28px 8px #33ff8888; }
+
+    /* pulse for red */
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 28px 8px #ff333388; }
+      50%       { box-shadow: 0 0 44px 18px #ff3333cc; }
+    }
+    .bulb.on-red { animation: pulse 1s ease-in-out infinite; }
+
+    /* ── Status label ──────────────────────────────────── */
+    #statusLabel {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      min-height: 2rem;
+    }
+    .label-red    { color: #ff3333; }
+    .label-yellow { color: #ffcc00; }
+    .label-green  { color: #33ff88; }
+
+    /* ── Deadline cards ────────────────────────────────── */
+    #deadlines {
+      width: 100%;
+      max-width: 560px;
+      margin-bottom: 1.5rem;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 0.9rem 1.1rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .card-course { font-weight: 600; color: #58a6ff; margin-bottom: 3px; }
+    .card-event  { color: #e6edf3; }
+    .card-meta   { color: #8b949e; font-size: 0.82rem; margin-top: 4px; }
+
+    .empty { color: #484f58; text-align: center; padding: 1.2rem; }
+
+    /* ── Footer row ────────────────────────────────────── */
+    .footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    #metaLine { color: #484f58; font-size: 0.78rem; }
+
+    #countdown {
+      font-size: 0.75rem;
+      color: #30363d;
+    }
+
+    button {
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    button.audio-on { color: #33ff88; border-color: #33ff88; }
+  </style>
+</head>
+<body>
+
+<h1>Deadline Alert Dashboard</h1>
+
+<div class="traffic-light">
+  <div class="bulb" id="bulb-red"></div>
+  <div class="bulb" id="bulb-yellow"></div>
+  <div class="bulb" id="bulb-green"></div>
+</div>
+
+<div id="statusLabel">Loading…</div>
+
+<div id="deadlines"></div>
+
+<div class="footer">
+  <div id="metaLine">Fetching data…</div>
+  <div id="countdown"></div>
+  <button id="audioBtn" onclick="toggleAudio()">🔇 Enable audio</button>
+</div>
+
+<script>
+  // ── Audio ─────────────────────────────────────────────
+  let audioCtx = null;
+  let audioOn  = false;
+
+  function toggleAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioOn = !audioOn;
+    const btn = document.getElementById('audioBtn');
+    btn.textContent = audioOn ? '🔊 Audio on' : '🔇 Audio off';
+    btn.classList.toggle('audio-on', audioOn);
+  }
+
+  function beep(freq, dur, type, startDelay) {
+    if (!audioCtx) return;
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    const t = audioCtx.currentTime + (startDelay || 0);
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  }
+
+  function playAlert(status) {
+    if (!audioOn || !audioCtx) return;
+    if (status === 'red') {
+      // three urgent square-wave bursts
+      beep(880, 0.18, 'square', 0.00);
+      beep(880, 0.18, 'square', 0.28);
+      beep(880, 0.18, 'square', 0.56);
+    } else if (status === 'yellow') {
+      beep(440, 0.35, 'sine');
+    } else {
+      // ascending two-note chime
+      beep(523, 0.25, 'sine', 0.00);
+      beep(659, 0.35, 'sine', 0.22);
+    }
+  }
+
+  // ── Traffic light ─────────────────────────────────────
+  const STATUS_CLASS = { red: 'on-red', yellow: 'on-yellow', green: 'on-green' };
+  const STATUS_LABEL = { red: '🔴 URGENT', yellow: '🟡 WARNING', green: '🟢 ALL CLEAR' };
+  const LABEL_CLASS  = { red: 'label-red', yellow: 'label-yellow', green: 'label-green' };
+
+  function setLight(status) {
+    ['red', 'yellow', 'green'].forEach(c => {
+      const el = document.getElementById('bulb-' + c);
+      el.className = 'bulb' + (c === status ? ' ' + STATUS_CLASS[c] : '');
+    });
+    const lbl = document.getElementById('statusLabel');
+    lbl.textContent  = STATUS_LABEL[status] || status.toUpperCase();
+    lbl.className    = LABEL_CLASS[status] || '';
+  }
+
+  // ── Deadline cards ────────────────────────────────────
+  function renderDeadlines(list) {
+    const el = document.getElementById('deadlines');
+    if (!list || list.length === 0) {
+      el.innerHTML = '<div class="card empty">No upcoming deadlines</div>';
+      return;
+    }
+    el.innerHTML = list.map(d => `
+      <div class="card">
+        <div class="card-course">${esc(d.course)}</div>
+        <div class="card-event">${esc(d.event)}</div>
+        <div class="card-meta">${esc(d.type)} &nbsp;·&nbsp; ${esc(d.deadline)}</div>
+      </div>`).join('');
+  }
+
+  function esc(str) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(str || ''));
+    return d.innerHTML;
+  }
+
+  // ── Polling ───────────────────────────────────────────
+  let lastStatus  = null;
+  let countdown   = 30;
+  const INTERVAL  = 30;
+
+  function fetchAlert() {
+    countdown = INTERVAL;
+    fetch('./alert.json?_=' + Date.now())
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(data => {
+        setLight(data.status);
+        renderDeadlines(data.deadlines);
+        document.getElementById('metaLine').textContent =
+          'Last updated: ' + (data.updated || '—');
+        if (data.status !== lastStatus) {
+          playAlert(data.status);
+          lastStatus = data.status;
+        }
+      })
+      .catch(err => {
+        document.getElementById('metaLine').textContent = 'Error: ' + err.message;
+      });
+  }
+
+  fetchAlert();
+  setInterval(fetchAlert, INTERVAL * 1000);
+
+  // countdown ticker
+  setInterval(() => {
+    countdown--;
+    if (countdown < 0) countdown = INTERVAL;
+    document.getElementById('countdown').textContent =
+      'Next refresh in ' + countdown + 's';
+  }, 1000);
+</script>
+</body>
+</html>
