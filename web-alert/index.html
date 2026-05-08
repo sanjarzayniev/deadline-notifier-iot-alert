@@ -138,51 +138,86 @@
 <div class="footer">
   <div id="metaLine">Fetching data…</div>
   <div id="countdown"></div>
-  <button id="audioBtn" onclick="toggleAudio()">🔇 Enable audio</button>
+  <button id="audioBtn" class="audio-on" onclick="toggleAudio()">🔊 Audio on</button>
 </div>
 
 <script>
   // ── Audio ─────────────────────────────────────────────
+  // Audio is ON by default; AudioContext is created on first user interaction
+  // (browser autoplay policy requires a gesture before sound can play).
   let audioCtx = null;
-  let audioOn  = false;
+  let audioOn  = true;
+
+  function ensureCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
 
   function toggleAudio() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    ensureCtx();
     audioOn = !audioOn;
     const btn = document.getElementById('audioBtn');
     btn.textContent = audioOn ? '🔊 Audio on' : '🔇 Audio off';
     btn.classList.toggle('audio-on', audioOn);
+    // Play immediately so the user hears what the current status sounds like
+    if (audioOn && lastStatus) playAlert(lastStatus);
   }
 
-  function beep(freq, dur, type, startDelay) {
-    if (!audioCtx) return;
-    const osc  = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+  function beep(freq, dur, type, startDelay, vol) {
+    const ctx  = ensureCtx();
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
     osc.connect(gain);
-    gain.connect(audioCtx.destination);
+    gain.connect(ctx.destination);
     osc.type = type || 'sine';
     osc.frequency.value = freq;
-    const t = audioCtx.currentTime + (startDelay || 0);
-    gain.gain.setValueAtTime(0.25, t);
+    const t = ctx.currentTime + (startDelay || 0);
+    gain.gain.setValueAtTime(vol || 0.25, t);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     osc.start(t);
     osc.stop(t + dur + 0.05);
   }
 
-  function playAlert(status) {
-    if (!audioOn || !audioCtx) return;
+  const SPEECH = {
+    red:    { text: 'You have a deadline for today!',                              rate: 1.15, pitch: 1.2 },
+    yellow: { text: 'You have a deadline for tomorrow.',                           rate: 1.0,  pitch: 1.0 },
+    green:  { text: "Chill bro, you don't have any assignments for today or tomorrow.", rate: 0.88, pitch: 0.85 }
+  };
+
+  function speak(status) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const cfg = SPEECH[status];
+    if (!cfg) return;
+    const u = new SpeechSynthesisUtterance(cfg.text);
+    u.rate  = cfg.rate;
+    u.pitch = cfg.pitch;
+    window.speechSynthesis.speak(u);
+  }
+
+  function playTones(status) {
     if (status === 'red') {
-      // three urgent square-wave bursts
-      beep(880, 0.18, 'square', 0.00);
-      beep(880, 0.18, 'square', 0.28);
-      beep(880, 0.18, 'square', 0.56);
+      // Urgent buzzing alarm — alternating hi/lo square-wave pairs
+      const pattern = [880, 440, 880, 440, 880, 440];
+      pattern.forEach((f, i) => beep(f, 0.13, 'square', i * 0.16, 0.28));
     } else if (status === 'yellow') {
-      beep(440, 0.35, 'sine');
+      // Calm descending melody — G4 F4 E4 D4
+      [[392, 0.0], [349, 0.4], [330, 0.8], [294, 1.2]]
+        .forEach(([f, d]) => beep(f, 0.38, 'sine', d, 0.22));
     } else {
-      // ascending two-note chime
-      beep(523, 0.25, 'sine', 0.00);
-      beep(659, 0.35, 'sine', 0.22);
+      // Chill ascending chime — C4 E4 G4 C5
+      [[261, 0.0], [329, 0.35], [392, 0.70], [523, 1.05]]
+        .forEach(([f, d]) => beep(f, 0.5, 'sine', d, 0.20));
     }
+  }
+
+  function playAlert(status) {
+    if (!audioOn) return;
+    speak(status);
+    playTones(status);
   }
 
   // ── Traffic light ─────────────────────────────────────
