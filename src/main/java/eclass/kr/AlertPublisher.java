@@ -29,7 +29,7 @@ public class AlertPublisher {
             Files.createDirectories(Paths.get("web-alert"));
             byte[] json = buildJson(status, items).getBytes(StandardCharsets.UTF_8);
             Files.write(Paths.get("web-alert", "alert.json"), json);
-            System.out.println("Alert published: web-alert/alert.json (status=" + status + ")");
+            System.out.println("\nAlert published: zayniev.uz/deadline-notifier-iot-alert/web-alert (status=" + status + ")");
         } catch (IOException e) {
             System.err.println("Failed to write alert.json: " + e.getMessage());
         }
