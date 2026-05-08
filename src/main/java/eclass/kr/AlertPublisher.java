@@ -4,7 +4,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -36,7 +37,8 @@ public class AlertPublisher {
     }
 
     private static String buildJson(String status, List<DeadlineItem> items) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        String timestamp = OffsetDateTime.now(ZoneOffset.ofHours(5))
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " (GMT+5)";
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
         sb.append("  \"status\": \"").append(status).append("\",\n");
