@@ -1,18 +1,18 @@
 {
-  "status": "yellow",
-  "updated": "2026-05-09 19:42:09 (GMT+5)",
+  "status": "red",
+  "updated": "2026-05-10 02:04:01 (GMT+5)",
   "deadlines": [
     {
       "course": "Computer Security",
       "event": "Project Presentation Video",
       "type": "Assignment",
-      "deadline": "Tomorrow at 11:55 🟡"
+      "deadline": "Today at 11:55 🔴"
     },
     {
       "course": "Internet of Things",
       "event": "Project and Paper writing Task",
       "type": "Assignment",
-      "deadline": "Tomorrow at 23:55 🟡"
+      "deadline": "Today at 23:55 🔴"
     },
     {
       "course": "Internet of Things",
