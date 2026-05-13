@@ -1,5 +1,18 @@
 {
-  "status": "green",
-  "updated": "2026-05-13 09:53:42 (GMT+5)",
-  "deadlines": []
+  "status": "yellow",
+  "updated": "2026-05-13 21:13:01 (GMT+5)",
+  "deadlines": [
+    {
+      "course": "Multimedia Application",
+      "event": "Assignment 2",
+      "type": "Assignment",
+      "deadline": "Tomorrow at 23:55 🟡"
+    },
+    {
+      "course": "Capstone Design",
+      "event": "Project 2 - Autorace, Lane-Following Speed Challenge (Report Submission)",
+      "type": "Assignment",
+      "deadline": "Saturday, 16 May at 23:55 🟢"
+    }
+  ]
 }
