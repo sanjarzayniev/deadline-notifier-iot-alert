@@ -1,12 +1,12 @@
 {
-  "status": "yellow",
-  "updated": "2026-05-13 21:13:01 (GMT+5)",
+  "status": "red",
+  "updated": "2026-05-14 09:52:34 (GMT+5)",
   "deadlines": [
     {
       "course": "Multimedia Application",
       "event": "Assignment 2",
       "type": "Assignment",
-      "deadline": "Tomorrow at 23:55 🟡"
+      "deadline": "Today at 23:55 🔴"
     },
     {
       "course": "Capstone Design",
