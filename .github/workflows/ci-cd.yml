@@ -7,9 +7,9 @@ on:
 #   pull_request:
 #     branches:
 #       - main
-  schedule:
-    - cron: "0 1 * * *" # it will be 7~8 am in our timezone
-    - cron: "0 14 * * *" # it will be 7~8 pm in our timezone
+#   schedule:
+#     - cron: "0 1 * * *" # it will be 7~8 am in our timezone
+#     - cron: "0 14 * * *" # it will be 7~8 pm in our timezone
 
 permissions:
   contents: write
